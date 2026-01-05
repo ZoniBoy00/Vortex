@@ -16,7 +16,7 @@
 Requirements: [Rust Toolchain](https://rustup.rs/)
 
 ```sh
-git clone https://github.com/YourUsername/vortex.git
+git clone https://github.com/ZoniBoy00/vortex.git
 cd vortex
 cargo build --release
 ```
