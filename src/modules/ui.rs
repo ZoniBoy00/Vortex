@@ -1,96 +1,116 @@
 use crate::modules::scanner::ScanResult;
 use colored::*;
+use std::net::IpAddr;
+use std::time::Duration;
 
 pub fn print_banner() {
-    print!("\x1B[2J\x1B[1;1H"); // Clear screen
+    println!(
+        "{}",
+        r#"
+__     __               __
+\ \   / /__ _ __ _  __ / _|_ __ _____ ___
+ \ \ / / _ \ '__| |/ /|  _| '__/ _ \ \ /
+  \ V /  __/ |  |   < | | | | |  __/>  <
+   \_/ \___|_|  |_|\_\|_| |_|  \___/_/\_\
 
-    println!("{}", r#"
-  _    __            __
- | |  / /___  ____  / /____  _  __
- | | / / __ \/ ___\/ __/ _ \| |/_/
- | |/ / /_/ / /   / /_/  __/>  <
- |___/\____/_/    \__/\___/_/|_|
-                                     
-    "#.bright_magenta().bold());
-    println!("{}", "  VORTEX NETWORK SCANNER v0.1".bright_cyan());
-    println!("{}", "  High-Performance Security Tool".blue().bold());
-    println!();
+"#.bright_cyan()
+    );
+    println!("{}", "Vortex Network Scanner".bright_cyan().bold());
+    println!("{}", "High-performance async port scanner in Rust\n".bright_black());
 }
 
-pub fn print_config(target: &str, start: u16, end: u16, timeout: u64, threads: usize) {
-    let border_color = |s: &str| s.bright_black();
-    let label_color = |s: &str| s.bright_white();
-    let val_color = |s: &str| s.cyan().bold();
-
-    println!("  {}", border_color("┌── SCAN TARGET ───────────────────────────────┐"));
-    println!("  {} {}: {:<31} {}", border_color("│"), label_color("Target     "), val_color(target), border_color("│"));
-    println!("  {} {}: {:<31} {}", border_color("│"), label_color("Range      "), format!("{}-{}", start, end).yellow(), border_color("│"));
-    println!("  {} {}: {:<31} {}", border_color("│"), label_color("Strategy   "), format!("{} threads, {}ms", threads, timeout).magenta(), border_color("│"));
-    println!("  {}", border_color("└──────────────────────────────────────────────┘"));
-    println!();
-}
-
-pub fn print_results(results: &[ScanResult], duration: std::time::Duration) {
-    println!();
-
-    if results.is_empty() {
-        println!("  {}", "No open ports found.".red());
-        return;
+pub fn print_config(
+    target: &IpAddr,
+    start_port: u16,
+    end_port: u16,
+    timeout: u64,
+    concurrency: usize,
+    top_ports: Option<u16>,
+    current: usize,
+    total: usize,
+) {
+    println!("{}\n", "⚙️  Scan Configuration".bold());
+    if total > 1 {
+        println!("  📍 Target {}: {} (target {}/{})", " ".repeat(6), target, current, total);
+    } else {
+        println!("  📍 Target:        {}", target);
     }
-
-    // Table Config
-    let col_port_width = 10;
-    let col_status_width = 10;
-    let col_service_width = 25;
-    
-    // Draw Header
-    let top_border = format!("  ┌{}┬{}┬{}┐", "─".repeat(col_port_width), "─".repeat(col_status_width), "─".repeat(col_service_width));
-    let header = format!("  │{:<w1$}│{:<w2$}│{:<w3$}│", 
-        " PORT".bold(), " STATUS".bold(), " SERVICE".bold(), 
-        w1=col_port_width, w2=col_status_width, w3=col_service_width);
-    let mid_border = format!("  ├{}┼{}┼{}┤", "─".repeat(col_port_width), "─".repeat(col_status_width), "─".repeat(col_service_width));
-    let bot_border = format!("  └{}┴{}┴{}┘", "─".repeat(col_port_width), "─".repeat(col_status_width), "─".repeat(col_service_width));
-
-    println!("{}", top_border.bright_black());
-    println!("{}", header);
-    println!("{}", mid_border.bright_black());
-
-    // Draw Rows
-    for r in results {
-        let port_str = format!(" {}", r.port);
-        let status_str = " OPEN";
-        // Truncate service if too long
-        let mut service_val = r.service.to_string();
-        if service_val.len() > col_service_width - 2 {
-            service_val.truncate(col_service_width - 5);
-            service_val.push_str("...");
-        }
-        let service_str = format!(" {}", service_val);
-        
-        let row = format!("  │{:<w1$}│{:<w2$}│{:<w3$}│", 
-            port_str.bold(), 
-            status_str.green().bold(), 
-            service_str, 
-            w1=col_port_width, w2=col_status_width, w3=col_service_width
-        );
-        println!("{}", row);
+    if let Some(n) = top_ports {
+        println!("  🚀 Mode:          Top {} ports", n);
+    } else {
+        println!("  📋 Port range:    {}-{}", start_port, end_port);
     }
-    
-    println!("{}", bot_border.bright_black());
-
-    // Summary
-    let duration_secs = duration.as_secs_f64();
+    println!("  ⏱️  Timeout:       {}ms", timeout);
+    println!("  ⚡ Concurrency:   {}", concurrency);
     println!();
-    println!("  {}", "Scan Complete.".bright_green().bold());
-    println!("  • {} open ports found", results.len().to_string().white().bold());
-    println!("  • Time elapsed: {:.2}s", duration_secs);
-    println!();
-}
-
-pub fn print_error(msg: &str) {
-    println!("  {} {}", "x".red().bold(), msg.red());
 }
 
 pub fn print_info(msg: &str) {
-    println!("  {} {}", "i".blue().bold(), msg.white());
+    println!("  {} {}", "[i]".bright_blue(), msg);
+}
+
+pub fn print_ok(msg: &str) {
+    println!("  {} {}", "[✓]".bright_green(), msg);
+}
+
+pub fn print_warn(msg: &str) {
+    println!("  {} {}", "[!]".bright_yellow(), msg);
+}
+
+pub fn print_error(msg: &str) {
+    eprintln!("  {} {}", "[✗]".bright_red(), msg);
+}
+
+pub fn print_results(results: &[ScanResult], duration: Duration) {
+    if results.is_empty() {
+        println!("  {} No open ports found.", "[!]".bright_yellow());
+        println!();
+        return;
+    }
+
+    println!("  {} Open ports found: {}", "[✓]".bright_green(), results.len());
+    println!(
+        "  {} Scan completed in {:.2}s",
+        "[i]".bright_blue(),
+        duration.as_secs_f64()
+    );
+    println!();
+
+    println!(
+        "  {:<8} {:<22} {:<18} {}",
+        "PORT".bold(),
+        "SERVICE".bold(),
+        "STATE".bold(),
+        "BANNER".bold()
+    );
+    println!("  {}", "─".repeat(80).bright_black());
+
+    for result in results {
+        let state = if result.open {
+            "🟢 OPEN".bright_green()
+        } else {
+            "🔴 CLOSED".bright_red()
+        };
+
+        let service = if result.service.is_empty() {
+            "unknown".bright_black().to_string()
+        } else {
+            result.service.bright_cyan().to_string()
+        };
+
+        let banner = if result.banner.is_empty() {
+            String::new()
+        } else {
+            format!(" {}", result.banner.bright_white())
+        };
+
+        println!(
+            "  {:<8} {:<22} {:<18}{}",
+            format!("{}/tcp", result.port).bright_white(),
+            service,
+            state,
+            banner,
+        );
+    }
+    println!();
 }
